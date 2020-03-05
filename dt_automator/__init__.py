@@ -1,4 +1,5 @@
 import json
+import zlib
 from typing import Dict
 
 from PIL.Image import open as img_open, Image
@@ -36,8 +37,10 @@ class DTAutomator:
         self.scenes = scenes
 
     def load(self, path: str):
-        with open(path, 'r', encoding='utf-8') as io:
-            data = json.load(io)  # type: dict
+        with open(path, 'rb') as io:
+            data = io.read()
+        data_str = zlib.decompress(data).decode('utf-8')
+        data = json.loads(data_str)
         scenes = {}
         for k, v in data.items():
             scene = SceneModel()
@@ -48,5 +51,6 @@ class DTAutomator:
     def dump(self, path):
         data = dict((k, v.data) for k, v in self.scenes.items())
         data_str = json.dumps(data, ensure_ascii=False)
-        with open(path, 'w', encoding='utf-8') as io:
-            io.write(data_str)
+        data = zlib.compress(data_str.encode('utf-8'))
+        with open(path, 'wb') as io:
+            io.write(data)

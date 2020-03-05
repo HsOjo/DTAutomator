@@ -13,17 +13,21 @@ class BaseModel:
                 v = getattr(self, k)
                 if isinstance(v, BaseModel):
                     v = v.data
-                if k in self._sub_model:
-                    c_type, type = self._sub_model[k]
-                    if c_type == list:
-                        items = [v_.data for v_ in v]
-                        v = items
-                    elif c_type == dict:
-                        items = dict([(k_, v_.data) for k_, v_ in v.items()])
-                        v = items
-                    else:
-                        raise Exception('Unsupport Type.')
-
+                else:
+                    if k in self._sub_model:
+                        sub_model = self._sub_model[k]
+                        if isinstance(sub_model, tuple):
+                            c_type, type = sub_model
+                            if c_type == list:
+                                items = [v_.data for v_ in v]
+                                v = items
+                            elif c_type == dict:
+                                items = dict([(k_, v_.data) for k_, v_ in v.items()])
+                                v = items
+                            else:
+                                raise Exception('Unsupport Type.')
+                        elif issubclass(sub_model, BaseModel):
+                            v = v.data
                 if not callable(v):
                     data[k] = v
         return data
