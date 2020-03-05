@@ -33,22 +33,29 @@ class BaseModel:
             if k in self._ignore_attrs:
                 continue
             if k in self._sub_model:
-                c_type, v_type = self._sub_model[k]
-                if c_type == list:
-                    items = []
-                    for i in v:
-                        item = v_type()  # type: BaseModel
-                        item.load_data(**i)
-                        items.append(item)
-                    v = items
-                elif c_type == dict:
-                    items = {}
-                    for k_, v_ in v.items():
-                        item = v_type()  # type: BaseModel
-                        item.load_data(**v_)
-                        items[k_] = item
-                    v = items
-                else:
-                    raise Exception('Unsupport Type.')
+                sub_model = self._sub_model[k]
+                if isinstance(sub_model, tuple):
+                    c_type, v_type = sub_model
+                    if c_type == list:
+                        items = []
+                        for i in v:
+                            item = v_type()  # type: BaseModel
+                            item.load_data(**i)
+                            items.append(item)
+                        v = items
+                    elif c_type == dict:
+                        items = {}
+                        for k_, v_ in v.items():
+                            item = v_type()  # type: BaseModel
+                            item.load_data(**v_)
+                            items[k_] = item
+                        v = items
+                    else:
+                        raise Exception('Unsupport Type.')
+                elif issubclass(sub_model, BaseModel):
+                    model = sub_model()
+                    model.load_data(**v)
+                    v = model
+
             if hasattr(self, k):
                 setattr(self, k, v)

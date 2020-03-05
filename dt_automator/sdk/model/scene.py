@@ -11,8 +11,7 @@ class SceneModel(BaseModel):
         objects=(list, ObjectModel),
     )
 
-    def __init__(self, event: dict):
-        self._event = event
+    def __init__(self):
         self.name = ''
         self.features = []  # type: List[FeatureModel]
         self.objects = []  # type: List[ObjectModel]
