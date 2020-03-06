@@ -12,6 +12,9 @@ from dt_automator.sdk.model import SceneModel, ObjectModel, FeatureModel
 class DTAutomator:
     def __init__(self):
         self.scenes = {}  # type: Dict[SceneModel]
+        self._event = dict(
+            get_scenes=lambda: self.scenes
+        )
 
     def load_from_maker(self, path_dir: str):
         project = Project.open(path_dir)
@@ -20,7 +23,7 @@ class DTAutomator:
             scene: MakerSceneModel
             io_img = open(scene.img_path, 'rb')
             img = img_open(io_img)  # type:Image
-            new_scene = SceneModel()
+            new_scene = SceneModel(self._event)
             new_scene.name = scene.name
             for feature in scene.features:
                 new_feature = FeatureModel()
@@ -43,7 +46,7 @@ class DTAutomator:
         data = json.loads(data_str)
         scenes = {}
         for k, v in data.items():
-            scene = SceneModel()
+            scene = SceneModel(self._event)
             scene.load_data(**v)
             scenes[k] = scene
         self.scenes = scenes

@@ -4,6 +4,8 @@ from typing import List
 from PIL.Image import new as img_new, Image
 
 from dt_automator.base.model import BaseModel
+from dt_automator.maker.model import FeatureModel
+from dt_automator.utils import list_math
 
 
 class ImageModel(BaseModel):
@@ -46,3 +48,20 @@ class ImageModel(BaseModel):
         index = (y * self.w + x) * 4
         [r, g, b, a] = self.pxs[index:index + 4]
         return r, g, b, a
+
+    def compare(self, img: Image, x=0, y=0, w=None, h=None, detect_weight=FeatureModel.DETECT_WEIGHT_MAX):
+        d_value = 0
+        d_value_max = 0
+        for py in range(h):
+            if py % (FeatureModel.DETECT_WEIGHT_MAX + 1 - detect_weight) == 0:
+                oy = y + py
+                for px in range(w):
+                    if px % (FeatureModel.DETECT_WEIGHT_MAX + 1 - detect_weight) == 0:
+                        ox = x + px
+                        pixel = img.getpixel((ox, oy))
+                        pixel_self = self.pixel(px, py)
+                        d_value_max += 255 * 4
+                        d_values = list_math.reduce(pixel, pixel_self)
+                        d_values = list_math.abs_(d_values)
+                        d_value += sum(d_values)
+        return d_value / d_value_max
