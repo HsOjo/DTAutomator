@@ -1,8 +1,10 @@
 import json
 import zlib
+from io import BytesIO
 from typing import Dict
 
 from PIL.Image import open as img_open, Image
+from pyadb import Device
 
 from dt_automator.maker import Project
 from dt_automator.maker.model import SceneModel as MakerSceneModel
@@ -10,11 +12,12 @@ from dt_automator.sdk.model import SceneModel, ObjectModel, FeatureModel
 
 
 class DTAutomator:
-    def __init__(self):
-        self.scenes = {}  # type: Dict[SceneModel]
+    def __init__(self, device: Device):
+        self.scenes = {}  # type: Dict[str, SceneModel]
         self._event = dict(
             get_scenes=lambda: self.scenes
         )
+        self._device = device
 
     def load_from_maker(self, path_dir: str):
         project = Project.open(path_dir)
@@ -57,3 +60,21 @@ class DTAutomator:
         data = zlib.compress(data_str.encode('utf-8'))
         with open(path, 'wb') as io:
             io.write(data)
+
+    @property
+    def current_scene(self):
+        img_data = self._device.display.screen_cap()
+        io_img = BytesIO(img_data)
+        img = img_open(io_img)
+        current_scene = None  # type: SceneModel
+        mp = 0
+        for scene in self.scenes.values():
+            p = scene.compare(img)
+            if p > 0.8:
+                print(scene.name, p)
+                if p > mp:
+                    mp = p
+                    current_scene = scene
+
+        io_img.close()
+        return current_scene

@@ -49,19 +49,32 @@ class ImageModel(BaseModel):
         [r, g, b, a] = self.pxs[index:index + 4]
         return r, g, b, a
 
-    def compare(self, img: Image, x=0, y=0, w=None, h=None, detect_weight=FeatureModel.DETECT_WEIGHT_MAX):
+    def compare(self, img: Image, mode, x=0, y=0, w=None, h=None, detect_weight=FeatureModel.DETECT_WEIGHT_MAX):
         d_value = 0
         d_value_max = 0
+        dw = FeatureModel.DETECT_WEIGHT_MAX + 1 - detect_weight
+        pixel_d_max = 255 * 4
         for py in range(h):
-            if py % (FeatureModel.DETECT_WEIGHT_MAX + 1 - detect_weight) == 0:
+            if py % dw == 0:
                 oy = y + py
                 for px in range(w):
-                    if px % (FeatureModel.DETECT_WEIGHT_MAX + 1 - detect_weight) == 0:
+                    if px % dw == 0:
                         ox = x + px
                         pixel = img.getpixel((ox, oy))
                         pixel_self = self.pixel(px, py)
-                        d_value_max += 255 * 4
-                        d_values = list_math.reduce(pixel, pixel_self)
-                        d_values = list_math.abs_(d_values)
-                        d_value += sum(d_values)
-        return d_value / d_value_max
+                        if mode == FeatureModel.MODE_DIFFERENCE:
+                            d_value_max += 1
+                            for i in range(4):
+                                if pixel[i] != pixel_self[i]:
+                                    d_value += 1
+                                    break
+                        elif mode == FeatureModel.MODE_DISTANCE:
+                            d_value_max += 1
+                            d_values = list_math.reduce(pixel, pixel_self)
+                            d_values = list_math.abs_(d_values)
+                            d_value += sum(d_values) / pixel_d_max
+
+        if d_value_max == 0:
+            return 0, 0
+
+        return d_value, d_value_max

@@ -13,7 +13,7 @@ class Project:
         self._event = dict(
             get_path=self.get_path,
         )
-        self.scenes = {}  # type: Dict[SceneModel]
+        self.scenes = {}  # type: Dict[str, SceneModel]
 
     @staticmethod
     def open(path):
