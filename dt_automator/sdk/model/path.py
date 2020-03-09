@@ -1,4 +1,7 @@
+import time
 from typing import List
+
+from pyandroidtouch import PyAndroidTouch
 
 import dt_automator.sdk.model as M
 from ...base.model import BaseModel
@@ -32,3 +35,8 @@ class PathModel(BaseModel):
     @property
     def distance(self):
         return sum([node.action.distance for node in self.nodes])
+
+    def do_actions(self, pat: PyAndroidTouch):
+        for node in self.nodes:
+            node.action.do(pat)
+            time.sleep(node.action.wait)
