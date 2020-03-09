@@ -15,9 +15,10 @@ class ActionModel(BaseModel):
 
     SCENE_NONE = 'None'
 
-    def __init__(self, parent=None):
+    def __init__(self):
         self.name = ''
         self.type = self.TYPE_TAP
         self.dest_scene = self.SCENE_NONE
         self.params = {}
-        self._parent = parent
+        self.distance = 1
+        self.wait = 1

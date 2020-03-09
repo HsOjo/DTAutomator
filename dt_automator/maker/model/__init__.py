@@ -1,4 +1,4 @@
-from .action import ActionModel
-from .feature import FeatureModel
-from .object import ObjectModel
-from .scene import SceneModel
+from .action import ActionModel as MakerActionModel
+from .feature import FeatureModel as MakerFeatureModel
+from .object import ObjectModel as MakerObjectModel
+from .scene import SceneModel as MakerSceneModel

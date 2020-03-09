@@ -1,8 +1,10 @@
-from dt_automator.maker.model import ObjectModel as MakerObjectModel
+from dt_automator.maker.model import MakerObjectModel
 from .image import ImageModel
 
 
 class ObjectModel(MakerObjectModel):
+    _ignore_dump_attrs = ['img']
+
     _sub_model = dict(
         **MakerObjectModel._sub_model,
         img=ImageModel,

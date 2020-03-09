@@ -10,7 +10,6 @@ class SceneModel(BaseModel):
         features=(list, FeatureModel),
         objects=(list, ObjectModel),
     )
-    _ignore_attrs = ['img_path']
 
     def __init__(self, event: dict):
         self._event = event
@@ -22,3 +21,6 @@ class SceneModel(BaseModel):
     @property
     def img_path(self):
         return self._event['get_path'](self.img)
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, self.name)

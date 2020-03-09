@@ -2,12 +2,13 @@ from typing import List, Dict, Any
 
 from PIL.Image import Image
 
-from dt_automator.base.model import BaseModel
+from dt_automator.maker.model import MakerSceneModel
 from .feature import FeatureModel
 from .object import ObjectModel
+from .path import PathModel, PathNodeModel
 
 
-class SceneModel(BaseModel):
+class SceneModel(MakerSceneModel):
     _sub_model = dict(
         features=(list, FeatureModel),
         objects=(list, ObjectModel),
@@ -15,6 +16,7 @@ class SceneModel(BaseModel):
 
     def __init__(self, event: dict):
         self._event = event
+        self._accuracy = 0
         self.name = ''
         self.features = []  # type: List[FeatureModel]
         self.objects = []  # type: List[ObjectModel]
@@ -25,18 +27,24 @@ class SceneModel(BaseModel):
         for object_ in self.objects:
             for action in object_.actions:
                 scenes.append(dict(
-                    scene=action.dest_scene,
+                    src_scene=self.name,
+                    dest_scene=action.dest_scene,
                     object=object_,
                     action=action,
                 ))
         return scenes
 
-    def find_paths(self, to, _path: list = None, _distance=1):
+    @property
+    def accuracy(self):
+        return self._accuracy
+
+    def _find_paths(self, to, _nodes: list = None, _from=None):
+        if _from is None:
+            _from = self
+        if _nodes is None:
+            _nodes = []
+
         scenes = self._event['get_scenes']()  # type: Dict[str, SceneModel]
-        _paths = []
-        if _path is None:
-            _path = [dict(scene=self.name, object=None, action=None, distance=0)]
-        path = _path.copy()
         if isinstance(to, str):
             to_scene = scenes[to]
         elif isinstance(to, SceneModel):
@@ -44,24 +52,36 @@ class SceneModel(BaseModel):
         else:
             raise Exception('Unsupport "to" type: %s' % to)
 
-        path_scene_names = [i['scene'] for i in path]
-        for info in self.next_scenes_info:
-            path = _path.copy()
-            info['distance'] = _distance
-            scene = scenes.get(info['scene'])  # type: SceneModel
-            if scene is not None and scene.name not in path_scene_names:
-                path.append(info)
-                if scene == to_scene:
-                    _paths.append(path)
-                else:
-                    _paths += scene.find_paths(to_scene, path, _distance + 1)
+        paths = []  # type: List[PathModel]
 
-        return _paths
+        nodes = _nodes.copy()
+        nodes_scene_name = [_from.name] + [node.dest_scene.name for node in nodes]
+        for info in self.next_scenes_info:
+            nodes = _nodes.copy()
+            dest_scene = scenes.get(info['dest_scene'])  # type: SceneModel
+            info['dest_scene'] = dest_scene
+            info['src_scene'] = self
+            if dest_scene is not None and dest_scene.name not in nodes_scene_name:
+                node = PathNodeModel()
+                node.load_data(**info)
+                nodes.append(node)
+
+                if dest_scene == to_scene:
+                    path = PathModel()
+                    path.load_data(nodes=nodes)
+                    paths.append(path)
+                else:
+                    paths += dest_scene._find_paths(to_scene, nodes, _from)
+
+        return paths
+
+    def find_paths(self, to):
+        return self._find_paths(to)
 
     def compare(self, img: Image):
         ma = img.width * img.height
         if len(self.features) == 0 or ma == 0:
-            return 0
+            return False
 
         mv = 0
         v = 0
@@ -71,4 +91,5 @@ class SceneModel(BaseModel):
             v += dv
             mv += dvm
 
-        return 1 - (v / mv)
+        self._accuracy = 1 - (v / mv)
+        return True

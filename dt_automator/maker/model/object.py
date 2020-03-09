@@ -10,8 +10,11 @@ class ObjectModel(BaseModel):
     )
 
     TYPE_BUTTON = 0
+    TYPE_TEXT = 1
+
     ALL_TYPES = {
         'Button': TYPE_BUTTON,
+        'Text': TYPE_TEXT,
     }
     ALL_TYPES_REV = dict((v, k) for k, v in ALL_TYPES.items())
 

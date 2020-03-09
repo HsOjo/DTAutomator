@@ -2,7 +2,7 @@ import json
 import os
 from typing import Dict
 
-from dt_automator.maker.model import SceneModel
+from dt_automator.maker.model import MakerSceneModel
 
 
 class Project:
@@ -13,7 +13,7 @@ class Project:
         self._event = dict(
             get_path=self.get_path,
         )
-        self.scenes = {}  # type: Dict[str, SceneModel]
+        self.scenes = {}  # type: Dict[str, MakerSceneModel]
 
     @staticmethod
     def open(path):
@@ -30,7 +30,7 @@ class Project:
             data = json.load(io)  # type: dict
         items = {}
         for k, v in data.items():
-            scene = SceneModel(self._event)
+            scene = MakerSceneModel(self._event)
             scene.load_data(**v)
             items[k] = scene
         self.scenes = items
