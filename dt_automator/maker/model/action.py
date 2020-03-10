@@ -33,7 +33,7 @@ class ActionModel(BaseModel):
         time=1000,
 
         distance=1,
-        wait=0,
+        wait=500,
 
         finger=1,
         finger_distance=64,

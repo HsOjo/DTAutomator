@@ -1,12 +1,13 @@
 from dt_automator.maker.model import MakerObjectModel
 from .image import ImageModel
+from .action import ActionModel
 
 
 class ObjectModel(MakerObjectModel):
-    _ignore_dump_attrs = ['img']
+    _ignore_repr_attrs = ['img']
 
     _sub_model = dict(
-        **MakerObjectModel._sub_model,
+        actions=(list, ActionModel),
         img=ImageModel,
     )
 

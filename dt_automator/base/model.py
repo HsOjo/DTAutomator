@@ -4,6 +4,7 @@ class BaseModel:
     __ignore_attrs = ['data', 'model_attrs']
     _ignore_load_attrs = []
     _ignore_dump_attrs = []
+    _ignore_repr_attrs = []
 
     def is_property(self, attr):
         return isinstance(getattr(self.__class__, attr, None), property)
@@ -12,18 +13,19 @@ class BaseModel:
     def model_attrs(self):
         attrs = dir(self)
         ks_cls = dir(self.__class__)
-        for attr in ks_cls:
+        for attr in reversed(ks_cls):
             if not self.is_property(attr):
                 attrs.remove(attr)
-        for attr in attrs:
+        for attr in reversed(attrs):
             if attr[0] == '_' or attr in self.__ignore_attrs:
                 attrs.remove(attr)
         return attrs
 
-    def _data(self, convert_sub_model=True, remove_property=True):
+    def _data(self, convert_sub_model=True, remove_property=True, remove_repr_attrs=False):
         data = {}
         for k in self.model_attrs:
-            if k in self._ignore_dump_attrs or k in self.__ignore_attrs or (remove_property and self.is_property(k)):
+            if k in self._ignore_dump_attrs or k in self.__ignore_attrs or (
+                    remove_property and self.is_property(k)) or (remove_repr_attrs and k in self._ignore_repr_attrs):
                 continue
 
             v = getattr(self, k)

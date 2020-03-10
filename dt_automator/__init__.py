@@ -1,23 +1,28 @@
 import json
+import time
 import zlib
 from io import BytesIO
-from typing import Dict, List
+from typing import Dict
 
 from PIL.Image import open as img_open, Image
 from pyadb import Device
+from pyandroidtouch import PyAndroidTouchADB
 
 from dt_automator.maker import Project
 from dt_automator.maker.model import MakerSceneModel
-from dt_automator.sdk.model import SceneModel, ObjectModel, FeatureModel
+from dt_automator.sdk.model import SceneModel, ObjectModel, FeatureModel, PathModel, PathNodeModel
 
 
 class DTAutomator:
-    def __init__(self, device: Device):
+    def __init__(self, device: Device = None):
         self._scenes = {}  # type: Dict[str, SceneModel]
         self._event = dict(
             get_scenes=lambda: self._scenes
         )
-        self._device = device
+
+        if device is not None:
+            self._device = device
+            self._pat = PyAndroidTouchADB(device)
 
     def load_from_maker(self, path_dir: str):
         project = Project.open(path_dir)
@@ -94,17 +99,36 @@ class DTAutomator:
     def find_paths(self, to, from_=None):
         if isinstance(to, str):
             to = self.scene(to)
+        if to is None:
+            return None
         if isinstance(from_, str):
             from_ = self.scene(from_)
         elif from_ is None:
             from_ = self.most_acc_scene
 
-        def convert_path(path:List[dict]):
-            actions = []
-            c_path = dict(actions=actions)
-            for node in path:
-                actions.append(node['action'])
-
-        paths = from_._find_paths(to)
-
+        paths = from_.find_paths(to)
         return paths
+
+    def do_path_actions(self, path: PathModel, detect_always=False, detect_timeout=10, detect_finish=True):
+        begin_time = time.time()
+
+        def hook_did_action(node: PathNodeModel):
+            if detect_always:
+                while True:
+                    self.compare_scenes()
+                    if self.most_acc_scene != node.dest_scene:
+                        if time.time() - begin_time > detect_timeout:
+                            return False
+                    else:
+                        break
+            return True
+
+        result = path.do_actions(self._pat, hook_did_action)
+        if detect_finish and not detect_always:
+            self.compare_scenes()
+            return path[-1].dest_scene == self.most_acc_scene
+
+        return result
+
+    def destroy(self):
+        self._pat.destroy()

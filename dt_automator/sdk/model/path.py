@@ -36,7 +36,11 @@ class PathModel(BaseModel):
     def distance(self):
         return sum([node.action.distance for node in self.nodes])
 
-    def do_actions(self, pat: PyAndroidTouch):
+    def do_actions(self, pat: PyAndroidTouch, hook_did_action=None):
         for node in self.nodes:
-            node.action.do(pat)
-            time.sleep(node.action.wait)
+            node.action.do(pat, node.object)
+            time.sleep(node.action.wait / 1000)
+            if hook_did_action is not None:
+                if not hook_did_action(node):
+                    return False
+        return True

@@ -76,7 +76,8 @@ class SceneModel(MakerSceneModel):
         return paths
 
     def find_paths(self, to):
-        return self._find_paths(to)
+        paths = sorted(self._find_paths(to), key=lambda x: x.distance)
+        return paths
 
     def compare(self, img: Image):
         ma = img.width * img.height

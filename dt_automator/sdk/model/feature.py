@@ -3,7 +3,7 @@ from dt_automator.sdk.model.image import ImageModel
 
 
 class FeatureModel(MakerFeatureModel):
-    _ignore_dump_attrs = ['img']
+    _ignore_repr_attrs = ['img']
 
     _sub_model = dict(
         **MakerFeatureModel._sub_model,
