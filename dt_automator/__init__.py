@@ -132,3 +132,11 @@ class DTAutomator:
 
     def destroy(self):
         self._pat.destroy()
+
+    @property
+    def device(self):
+        return self._device
+
+    @property
+    def pyandroidtouch(self):
+        return self._pat
