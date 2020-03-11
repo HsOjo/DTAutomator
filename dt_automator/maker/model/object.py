@@ -18,8 +18,22 @@ class ObjectModel(BaseModel):
     }
     ALL_TYPES_REV = dict((v, k) for k, v in ALL_TYPES.items())
 
+    PARAM_NONE = 'None'
+
+    PARAMS_COMMON = []
+
+    PARAMS_TYPE = {
+        TYPE_BUTTON: [],
+        TYPE_TEXT: ['color'],
+    }
+
+    PARAMS_DEFAULT = dict(
+        color=PARAM_NONE,
+    )
+
     def __init__(self):
         self.name = ''
         self.rect = []  # type: List[int]
         self.type = self.TYPE_BUTTON
         self.actions = []  # type: List[ActionModel]
+        self.params = {}

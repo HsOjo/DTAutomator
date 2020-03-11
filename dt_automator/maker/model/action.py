@@ -11,7 +11,7 @@ class ActionModel(BaseModel):
     }
     ALL_TYPES_REV = dict((v, k) for k, v in ALL_TYPES.items())
 
-    SCENE_NONE = 'None'
+    PARAM_NONE = 'None'
 
     PARAMS_COMMON = ['distance', 'wait']
 
@@ -43,7 +43,7 @@ class ActionModel(BaseModel):
     def __init__(self):
         self.name = ''
         self.type = self.TYPE_TAP
-        self.dest_scene = self.SCENE_NONE
+        self.dest_scene = self.PARAM_NONE
         self.params = {}
 
     @property
