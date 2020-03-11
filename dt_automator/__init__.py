@@ -30,7 +30,7 @@ class DTAutomator:
         for name, scene in project.scenes.items():
             scene: MakerSceneModel
             io_img = open(scene.img_path, 'rb')
-            img = img_open(io_img)  # type:Image
+            img = img_open(io_img)  # type: Image
             new_scene = SceneModel(self._event)
             new_scene.name = scene.name
             for feature in scene.features:
