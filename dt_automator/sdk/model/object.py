@@ -1,6 +1,5 @@
 from io import BytesIO
 
-import pytesseract
 from PIL.Image import open as img_open
 
 from dt_automator.maker.model import MakerObjectModel
@@ -20,7 +19,16 @@ class ObjectModel(MakerObjectModel):
         super().__init__()
         self.img = ImageModel()
 
-    def detect_text(self, img_data: bytes, px_distance=0, lang='eng', separate_chars=False):
+    @property
+    def actions_name(self):
+        return [action.name for action in self.actions]
+
+    def action(self, name):
+        for action in self.actions:
+            if name == action.name:
+                return action
+
+    def image(self, img_data: bytes):
         img = self.img
         if img_data is not None:
             img = ImageModel()
@@ -29,14 +37,16 @@ class ObjectModel(MakerObjectModel):
                 img.load_image(image, *self.rect)
 
         w, h = img.w, img.h
-        if self.type != self.TYPE_TEXT or w == 0 or h == 0:
+        if w == 0 or h == 0:
             return None
 
+        return img
+
+    def text_image(self, img_data: bytes, px_distance=0, separate_chars=False):
+        if self.type != self.TYPE_TEXT:
+            return None
+        img = self.image(img_data)
         color = self.params.get('color')
         img_data = img.dump_text_image(color, px_distance=px_distance, separate_chars=separate_chars)
 
-        with BytesIO(img_data) as io_img:
-            image = img_open(io_img)
-            result = pytesseract.image_to_string(image, lang)
-
-        return result
+        return img_data
