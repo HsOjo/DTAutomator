@@ -20,7 +20,7 @@ class ObjectModel(MakerObjectModel):
         super().__init__()
         self.img = ImageModel()
 
-    def detect_text(self, img_data: bytes, px_distance=0, lang='eng'):
+    def detect_text(self, img_data: bytes, px_distance=0, lang='eng', separate_chars=False):
         img = self.img
         if img_data is not None:
             img = ImageModel()
@@ -33,7 +33,7 @@ class ObjectModel(MakerObjectModel):
             return None
 
         color = self.params.get('color')
-        img_data = img.dump_text_image(color, px_distance=px_distance)
+        img_data = img.dump_text_image(color, px_distance=px_distance, separate_chars=separate_chars)
 
         with BytesIO(img_data) as io_img:
             image = img_open(io_img)

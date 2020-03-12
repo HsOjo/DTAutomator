@@ -54,7 +54,7 @@ class ImageModel(BaseModel):
             data = io.read()
         return data
 
-    def dump_text_image(self, color=None, rect=None, px_distance=0, text_border=2):
+    def dump_text_image(self, color=None, rect=None, px_distance=0, text_border=2, separate_chars=False):
         if color is None:
             color = self.most_acc_text_color
         if isinstance(color, list):
@@ -72,42 +72,47 @@ class ImageModel(BaseModel):
             w, h = img.width, img.height
             img = img.convert('1')
 
-            sx, ex = -1, -1
-            chrs_rect = []  # type: List[tuple]
-            for x in range(w):
-                for y in range(h):
-                    if img.getpixel((x, y)) == 0 and x != w - 1:
-                        if sx == -1:
-                            sx = x
-                        break
-                    elif (y == h - 1 or x == w - 1) and ex == -1 and sx != -1:
-                        ex = x
-                        chrs_rect.append((sx, 0, ex - sx, h))
-                        sx, ex = -1, -1
-                        break
-            sum_w = sum([rect[2] for rect in chrs_rect])
-            if len(chrs_rect) >= 2:
-                avg_w = sum_w / len(chrs_rect)
-                for i in range(len(chrs_rect) - 1, 0, -1):
-                    px, py, pw, ph = chrs_rect[i]
-                    x, y, w, h = chrs_rect[i - 1]
-                    if px - x >= avg_w * 1.8:
-                        chrs_rect.insert(i, None)
+            if separate_chars:
+                sx, ex = -1, -1
+                chrs_rect = []  # type: List[tuple]
+                for x in range(w):
+                    for y in range(h):
+                        if img.getpixel((x, y)) == 0 and x != w - 1:
+                            if sx == -1:
+                                sx = x
+                            break
+                        elif (y == h - 1 or x == w - 1) and ex == -1 and sx != -1:
+                            ex = x
+                            chrs_rect.append((sx, 0, ex - sx, h))
+                            sx, ex = -1, -1
+                            break
+                sum_w = sum([rect[2] for rect in chrs_rect])
+                chrs_num = len(chrs_rect)
+                if chrs_num >= 2:
+                    avg_w = sum_w / chrs_num
+                    for i in range(chrs_num - 1, 0, -1):
+                        px, py, pw, ph = chrs_rect[i]
+                        x, y, w, h = chrs_rect[i - 1]
+                        if px - x - w >= avg_w * 0.5:
+                            chrs_rect.insert(i, (None, None, avg_w * 0.5, None))
 
-            sum_w = sum([r[2] for r in chrs_rect if r is not None])
-            avg_w = sum_w / len(chrs_rect)
-            chr_distance = avg_w
-            new_img = img_new('1', (int(sum_w * 3 + chr_distance * (len(chrs_rect) - 1)), int(h * 3)), 1)
-            ox = 0
-            for chr_rect in chrs_rect:
-                if chr_rect is None:
-                    ox += avg_w + chr_distance
-                    continue
+                sum_w = sum([rect[2] for rect in chrs_rect])
+                avg_w = sum_w / chrs_num
+                chr_distance = avg_w * 0.8
+                new_img = img_new('1', (int(sum_w * 2 + chr_distance * (chrs_num - 1)), int(h * 2)), 255)
+                ox = 0
+                for chr_rect in chrs_rect:
+                    if chr_rect[0] is None:
+                        ox += chr_rect[2] + chr_distance
+                        continue
 
-                x, y, w, h = chr_rect
-                new_img.paste(img.crop((x, y, x + w, y + h)), (int(sum_w + ox), int(h)))
-                ox += w + chr_distance
-            new_img = new_img.resize((new_img.width * 2, new_img.height * 2))
+                    x, y, w, h = chr_rect
+                    new_img.paste(img.crop((x, y, x + w, y + h)), (int(sum_w * 0.5 + ox), int(h * 0.5)))
+                    ox += w + chr_distance
+            else:
+                new_img = img_new('1', (w * 2, h * 2), 255)
+                new_img.paste(img, (int(w * 0.5), int(h * 0.5)))
+
             return new_img
 
         return self.dump_image(*rect, hook_pixel=hook_pixel, hook_save=hook_save, format='png')
