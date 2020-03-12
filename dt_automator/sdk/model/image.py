@@ -31,7 +31,7 @@ class ImageModel(BaseModel):
 
         self.pxs, self.w, self.h = pxs, w, h
 
-    def dump_image(self, x=0, y=0, w=None, h=None):
+    def dump_image(self, x=0, y=0, w=None, h=None, hook_pixel=None, hook_save=None, format='png'):
         if w is None:
             w = self.w
         if h is None:
@@ -42,12 +42,75 @@ class ImageModel(BaseModel):
         img = img_new('RGBA', (w, h))
         for oy in range(h):
             for ox in range(w):
-                img.putpixel((ox, oy), self.pixel(x + ox, y + oy))
+                pixel = self.pixel(x + ox, y + oy)
+                if hook_pixel is not None:
+                    pixel = hook_pixel(pixel)
+                img.putpixel((ox, oy), pixel)
+        if hook_save is not None:
+            img = hook_save(img)
         with BytesIO() as io:
-            img.save(io, 'png')
+            img.save(io, format)
             io.seek(0)
             data = io.read()
         return data
+
+    def dump_text_image(self, color=None, rect=None, px_distance=0, text_border=2):
+        if color is None:
+            color = self.most_acc_text_color
+        if isinstance(color, list):
+            color = tuple(color)
+        if rect is None:
+            rect = self.text_rect(color, px_distance, text_border)
+
+        def hook_pixel(c):
+            if c == color or (px_distance > 0 and sum(list_math.abs_(list_math.reduce(c, color))) < px_distance):
+                return 0, 0, 0, 255
+            else:
+                return 255, 255, 255, 255
+
+        def hook_save(img: Image):
+            w, h = img.width, img.height
+            img = img.convert('1')
+
+            sx, ex = -1, -1
+            chrs_rect = []  # type: List[tuple]
+            for x in range(w):
+                for y in range(h):
+                    if img.getpixel((x, y)) == 0 and x != w - 1:
+                        if sx == -1:
+                            sx = x
+                        break
+                    elif (y == h - 1 or x == w - 1) and ex == -1 and sx != -1:
+                        ex = x
+                        chrs_rect.append((sx, 0, ex - sx, h))
+                        sx, ex = -1, -1
+                        break
+            sum_w = sum([rect[2] for rect in chrs_rect])
+            if len(chrs_rect) >= 2:
+                avg_w = sum_w / len(chrs_rect)
+                for i in range(len(chrs_rect) - 1, 0, -1):
+                    px, py, pw, ph = chrs_rect[i]
+                    x, y, w, h = chrs_rect[i - 1]
+                    if px - x >= avg_w * 1.8:
+                        chrs_rect.insert(i, None)
+
+            sum_w = sum([r[2] for r in chrs_rect if r is not None])
+            avg_w = sum_w / len(chrs_rect)
+            chr_distance = avg_w
+            new_img = img_new('1', (int(sum_w * 3 + chr_distance * (len(chrs_rect) - 1)), int(h * 3)), 1)
+            ox = 0
+            for chr_rect in chrs_rect:
+                if chr_rect is None:
+                    ox += avg_w + chr_distance
+                    continue
+
+                x, y, w, h = chr_rect
+                new_img.paste(img.crop((x, y, x + w, y + h)), (int(sum_w + ox), int(h)))
+                ox += w + chr_distance
+            new_img = new_img.resize((new_img.width * 2, new_img.height * 2))
+            return new_img
+
+        return self.dump_image(*rect, hook_pixel=hook_pixel, hook_save=hook_save, format='png')
 
     def pixel(self, x, y):
         index = (y * self.w + x) * 4
@@ -116,7 +179,7 @@ class ImageModel(BaseModel):
         colors = sorted(colors, key=lambda x: colors_count_sorted.index(x) + colors_diff_sorted.index(x))
         return colors[0]
 
-    def text_rect(self, color=None, distance=0, border=2):
+    def text_rect(self, color=None, px_distance=0, text_border=2):
         if color is None:
             color = self.most_acc_text_color
         if isinstance(color, list):
@@ -126,7 +189,7 @@ class ImageModel(BaseModel):
         for y in range(self.h):
             for x in range(self.w):
                 c = self.pixel(x, y)
-                if c == color or (distance > 0 and sum(list_math.abs_(list_math.reduce(c, color))) < distance):
+                if c == color or (px_distance > 0 and sum(list_math.abs_(list_math.reduce(c, color))) < px_distance):
                     if x < l:
                         l = x
                     if x > r:
@@ -136,6 +199,6 @@ class ImageModel(BaseModel):
                     if y > b:
                         b = y
         result = [l, t, r - l, b - t]
-        if border > 0:
-            result = list_math.add(result, [-border, -border, border * 2, border * 2])
+        if text_border > 0:
+            result = list_math.add(result, [-text_border, -text_border, text_border * 2, text_border * 2])
         return result

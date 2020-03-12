@@ -20,19 +20,23 @@ class ObjectModel(MakerObjectModel):
         super().__init__()
         self.img = ImageModel()
 
-    def detect_text(self, distance=0, border=2):
-        w, h = self.img.w, self.img.h
+    def detect_text(self, img_data: bytes, px_distance=0, lang='eng'):
+        img = self.img
+        if img_data is not None:
+            img = ImageModel()
+            with BytesIO(img_data) as io_img:
+                image = img_open(io_img)
+                img.load_image(image, *self.rect)
+
+        w, h = img.w, img.h
         if self.type != self.TYPE_TEXT or w == 0 or h == 0:
             return None
 
         color = self.params.get('color')
-        if color is None:
-            color = self.img.most_acc_text_color
-        rect = self.img.text_rect(color, distance, border)
-        img_data = self.img.dump_image(*rect)
-        io_img = BytesIO(img_data)
-        img = img_open(io_img)
-        result = pytesseract.image_to_string(img, 'eng', config='/usr/local/Cellar/tesseract/4.1.1/share/tessdata')
-        io_img.close()
+        img_data = img.dump_text_image(color, px_distance=px_distance)
+
+        with BytesIO(img_data) as io_img:
+            image = img_open(io_img)
+            result = pytesseract.image_to_string(image, lang)
 
         return result
