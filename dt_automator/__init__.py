@@ -8,14 +8,14 @@ from PIL.Image import open as img_open, Image
 from pyadb import Device
 from pyandroidtouch import PyAndroidTouchADB
 
+import dt_automator.sdk.model as M
 from dt_automator.maker import Project
 from dt_automator.maker.model import MakerSceneModel
-from dt_automator.sdk.model import SceneModel, ObjectModel, FeatureModel, PathModel, PathNodeModel
 
 
 class DTAutomator:
     def __init__(self, device: Device = None):
-        self._scenes = {}  # type: Dict[str, SceneModel]
+        self._scenes = {}  # type: Dict[str, M.SceneModel]
         self._event = dict(
             get_scenes=lambda: self._scenes
         )
@@ -31,15 +31,15 @@ class DTAutomator:
             scene: MakerSceneModel
             io_img = open(scene.img_path, 'rb')
             img = img_open(io_img)  # type: Image
-            new_scene = SceneModel(self._event)
+            new_scene = M.SceneModel(self._event)
             new_scene.name = scene.name
             for feature in scene.features:
-                new_feature = FeatureModel()
+                new_feature = M.FeatureModel()
                 new_feature.load_data(**feature.data)
                 new_feature.img.load_image(img, *feature.rect)
                 new_scene.features.append(new_feature)
             for object_ in scene.objects:
-                new_object = ObjectModel()
+                new_object = M.ObjectModel()
                 new_object.load_data(**object_.data)
                 new_object.img.load_image(img, *object_.rect)
                 new_scene.objects.append(new_object)
@@ -54,7 +54,7 @@ class DTAutomator:
         data = json.loads(data_str)
         scenes = {}
         for k, v in data.items():
-            scene = SceneModel(self._event)
+            scene = M.SceneModel(self._event)
             scene.load_data(**v)
             scenes[k] = scene
         self._scenes = scenes
@@ -65,6 +65,9 @@ class DTAutomator:
         data = zlib.compress(data_str.encode('utf-8'))
         with open(path, 'wb') as io:
             io.write(data)
+
+    def set_device(self, device: Device):
+        self._device = device
 
     def compare_scenes(self, img_data=None):
         if img_data is None:
@@ -109,10 +112,10 @@ class DTAutomator:
         paths = from_.find_paths(to)
         return paths
 
-    def do_path_actions(self, path: PathModel, detect_always=False, detect_timeout=10, detect_finish=True):
+    def do_path_actions(self, path: M.PathModel, detect_always=False, detect_timeout=10, detect_finish=True):
         begin_time = time.time()
 
-        def hook_did_action(node: PathNodeModel):
+        def hook_did_action(node: M.PathNodeModel):
             if detect_always:
                 while True:
                     self.compare_scenes()
