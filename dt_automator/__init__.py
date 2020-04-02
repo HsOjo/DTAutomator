@@ -2,6 +2,7 @@ import json
 import time
 import zlib
 from io import BytesIO
+from threading import Thread
 from typing import Dict
 
 from PIL.Image import open as img_open, Image
@@ -13,16 +14,78 @@ from dt_automator.maker import Project
 from dt_automator.maker.model import MakerSceneModel
 
 
+class StopException(Exception):
+    pass
+
+
 class DTAutomator:
-    def __init__(self, device: Device = None):
+    def __init__(self, device: Device = None, refresh_interval=100):
         self._scenes = {}  # type: Dict[str, M.SceneModel]
         self._event = dict(
             get_scenes=lambda: self._scenes
         )
 
+        self._refresh_interval = refresh_interval / 1000
+        self._device = None  # type: Device
+        self._pat = None  # type: PyAndroidTouchADB
+
+        self._is_pause = False
+        self._is_stop = True
+
         if device is not None:
-            self._device = device
-            self._pat = PyAndroidTouchADB(device)
+            self.set_device(device)
+
+    def _callback_action_update(self):
+        while self._is_pause:
+            time.sleep(self._refresh_interval)
+        if self._is_stop:
+            raise StopException()
+
+    def _callback_thread(self):
+        self._is_pause = False
+        self._is_stop = False
+
+        self.callback_init()
+        while not self._is_stop:
+            while self._is_pause and not self._is_stop:
+                time.sleep(self._refresh_interval)
+            if self._is_stop:
+                break
+
+            try:
+                self.callback_update()
+            except StopException:
+                break
+
+            time.sleep(self._refresh_interval)
+        self.callback_destroy()
+
+    def callback_init(self):
+        pass
+
+    def callback_update(self):
+        pass
+
+    def callback_destroy(self):
+        pass
+
+    def callback_screen_update(self, img_data: bytes):
+        pass
+
+    def callback_scenes_update(self, most_acc_scene: M.SceneModel):
+        pass
+
+    def play(self):
+        if self._is_pause:
+            self._is_pause = False
+        elif self._is_stop:
+            Thread(target=self._callback_thread).start()
+
+    def pause(self):
+        self._is_pause = True
+
+    def stop(self):
+        self._is_stop = True
 
     def load_from_maker(self, path_dir: str):
         project = Project.open(path_dir)
@@ -68,6 +131,9 @@ class DTAutomator:
 
     def set_device(self, device: Device):
         self._device = device
+        self._pat = PyAndroidTouchADB(device)
+        self._pat.set_callback_action_begin(lambda *_: self._callback_action_update())
+        self._pat.set_callback_action_end(lambda *_: self._callback_action_update())
 
     def compare_scenes(self, img_data=None):
         if img_data is None:
@@ -77,6 +143,11 @@ class DTAutomator:
         for scene in self._scenes.values():
             scene.compare(img)
         io_img.close()
+
+        most_acc_scene = self.most_acc_scene
+        self.callback_scenes_update(most_acc_scene)
+
+        return most_acc_scene
 
     def scene(self, name):
         return self._scenes.get(name)
@@ -97,7 +168,9 @@ class DTAutomator:
 
     @property
     def screen(self):
-        return self._device.display.screen_cap()
+        screen = self._device.display.screen_cap()
+        self.callback_screen_update(screen)
+        return screen
 
     def find_paths(self, to, from_=None):
         if isinstance(to, str):
