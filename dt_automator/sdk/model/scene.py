@@ -92,5 +92,5 @@ class SceneModel(MakerSceneModel):
             v += dv
             mv += dvm
 
-        self._accuracy = 1 - (v / mv)
+        self._accuracy = 1 - (v / mv) if mv != 0 else 0
         return True

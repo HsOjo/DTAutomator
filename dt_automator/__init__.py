@@ -207,7 +207,8 @@ class DTAutomator:
         return result
 
     def destroy(self):
-        self._pat.destroy()
+        if self._pat is not None:
+            self._pat.destroy()
 
     @property
     def device(self):

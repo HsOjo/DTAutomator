@@ -2,10 +2,12 @@ from dt_automator.base.model import BaseModel
 
 
 class ActionModel(BaseModel):
+    TYPE_GROUP = -1
     TYPE_TAP = 0
     TYPE_SWIPE = 1
 
     ALL_TYPES = {
+        'Group': TYPE_GROUP,
         'Tap': TYPE_TAP,
         'Swipe': TYPE_SWIPE,
     }
@@ -16,6 +18,7 @@ class ActionModel(BaseModel):
     PARAMS_COMMON = ['distance', 'wait']
 
     PARAMS_TYPE = {
+        TYPE_GROUP: ['x', 'y', 'actions'],
         TYPE_TAP: ['x', 'y', 'press_time', 'count', 'finger', 'finger_distance', 'finger_degree'],
         TYPE_SWIPE: ['start_x', 'start_y', 'end_x', 'end_y', 'press_time', 'time', 'finger', 'finger_distance'],
     }
@@ -38,6 +41,8 @@ class ActionModel(BaseModel):
         finger=1,
         finger_distance=64,
         finger_degree=0,
+
+        actions='',
     )
 
     def __init__(self):

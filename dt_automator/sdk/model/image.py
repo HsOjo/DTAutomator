@@ -133,19 +133,28 @@ class ImageModel(BaseModel):
                 for px in range(w):
                     if px % dw == 0:
                         ox = x + px
-                        pixel = img.getpixel((ox, oy))
+                        if 0 <= ox < img.width and 0 <= oy < img.height:
+                            pixel = img.getpixel((ox, oy))
+                        else:
+                            pixel = None
                         pixel_self = self.pixel(px, py)
                         if mode == MakerFeatureModel.MODE_DIFFERENCE:
                             d_value_max += 1
-                            for i in range(4):
-                                if pixel[i] != pixel_self[i]:
-                                    d_value += 1
-                                    break
+                            if pixel is not None:
+                                for i in range(4):
+                                    if pixel[i] != pixel_self[i]:
+                                        d_value += 1
+                                        break
+                            else:
+                                d_value += 1
                         elif mode == MakerFeatureModel.MODE_DISTANCE:
                             d_value_max += 1
-                            d_values = list_math.reduce(pixel, pixel_self)
-                            d_values = list_math.abs_(d_values)
-                            d_value += sum(d_values) / pixel_d_max
+                            if pixel is not None:
+                                d_values = list_math.reduce(pixel, pixel_self)
+                                d_values = list_math.abs_(d_values)
+                                d_value += sum(d_values) / pixel_d_max
+                            else:
+                                d_value += 1
 
         if d_value_max == 0:
             return 0, 0
